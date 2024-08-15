@@ -24,11 +24,11 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22.6
-      - name: Install sharp manually
-        run: npm install sharp --legacy-peer-deps
       - name: Install dependencies
-        run: npm install
-      - name: Install, build, and upload your site
+        run: yarn install
+      - name: Install sharp manually
+        run: yarn add sharp --ignore-engines
+      - name: Build and upload your site
         uses: withastro/action@v2
         # with:
           # path: . # The root location of your Astro project inside the repository. (optional)
