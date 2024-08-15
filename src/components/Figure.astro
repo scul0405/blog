@@ -11,9 +11,11 @@ type Props = {
 };
 ---
 
-<figure>
-  <Image {...Astro.props} class="rounded-lg" />
-  <figcaption>
-    <slot />
-  </figcaption>
-</figure>
+<div style="display: flex; justify-content: center; align-items: center; text-align: center;">
+  <figure>
+    <Image {...Astro.props} class="rounded-lg" style="display: block; margin-left: auto; margin-right: auto;" />
+    <figcaption>
+      <slot />
+    </figcaption>
+  </figure>
+</div>

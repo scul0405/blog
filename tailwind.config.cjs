@@ -14,7 +14,7 @@ module.exports = {
                 14: '3.5rem',
             },
             fontFamily: {
-                sans: ['Onest', ...fontFamily.sans],
+                sans: ['Inter', ...fontFamily.sans],
             },
             colors: {
                 primary: colors.pink,
