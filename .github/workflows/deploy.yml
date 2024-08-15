@@ -23,9 +23,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20.16
+          node-version: 22.6
+      - name: Install sharp manually
+        run: npm install sharp --legacy-peer-deps
       - name: Install dependencies
         run: npm install
+      - name: Install
       - name: Install, build, and upload your site
         uses: withastro/action@v2
         # with:
