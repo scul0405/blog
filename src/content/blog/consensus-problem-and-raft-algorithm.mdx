@@ -15,6 +15,17 @@ import raftLog from "@/assets/raft-consensus/raft-log.png"
 import raftState from "@/assets/raft-consensus/raft-state.png"
 import raftTerm from "@/assets/raft-consensus/raft-term.png"
 import votingDiagram from "@/assets/raft-consensus/voting-diagram.png"
+import raftInit from "@/assets/raft-consensus/raft-init.png"
+import raftStartVoting from "@/assets/raft-consensus/raft-start-voting.png"
+import raftVoting from "@/assets/raft-consensus/raft-voting.png"
+import raftGotNewLeader from "@/assets/raft-consensus/raft-got-new-leader.png"
+import raftResponseLeader from "@/assets/raft-consensus/raft-response-leader.png"
+import raftStartRequest from "@/assets/raft-consensus/raft-start-request.png"
+import raftReplicatedLogSuccess from "@/assets/raft-consensus/raft-replicated-log-success.png"
+import raftRequestOneNodeFailed from "@/assets/raft-consensus/raft-request-one-node-failed.png"
+import raftLeaderResendAppendRequest from "@/assets/raft-consensus/raft-leader-re-send-append-request.png"
+import raftReplicatedLogSuccessAfterRestart from "@/assets/raft-consensus/raft-replicated-log-success-after-re-start.png"
+
 
 
 
@@ -139,7 +150,10 @@ Mỗi node trên Raft sẽ có 3 trạng thái:
 #### Term
 <Figure src={raftTerm} alt="">Raft Term</Figure>
 
-Term là số tự nhiên, đánh số liên tục, đóng vai trò như logical timestamp. Chỉ có tối đa một leader cho mỗi term. Thông tin về term luôn được trao đổi giữa các server mỗi khi gửi nhận message.
+Term là số tự nhiên, đánh số liên tục, đóng vai trò như logical timestamp. 
+Chỉ có tối đa một leader cho mỗi term. Thông tin về term luôn được trao đổi giữa các server mỗi khi gửi nhận message.
+
+**Lưu ý**: Thuật toán Raft sử dụng Term bằng 1 là số khởi tạo.
 #### Log
 <Figure src={raftLog} alt="">Ví dụ về log trong Raft</Figure>
 
@@ -165,6 +179,8 @@ Có 2 phần chính:
 - Bầu chọn leader
 - Log replication
 
+Ở đây mình sử dụng Raft Visualization từ trang chủ của Raft. Các bạn có thể thử [tại đây](https://raft.github.io/)
+
 #### Bầu chọn leader
 Quá trình bầu chọn có thể mô tả như sau:
 <Figure src={votingDiagram} alt="">Mô tả quá trình bầu chọn trong Raft</Figure>
@@ -175,15 +191,21 @@ Leader lúc này sẽ gửi định kì heartbeat đến tất cả các followe
 Sau một thời gian timeout khi không nhận được tín hiệu từ Leader, nó sẽ cho rằng hiện tại đang không có leader nào khả thi
 và sẽ tiến hành 1 cuộc bầu cử mới để chọn ra leader.
 
+<Figure src={raftInit} alt="">Trạng thái của các node khi khởi tạo với term bằng 1 và chưa có leader</Figure>
+
 Có 2 giai đoạn chính trong quá trình bầu cử như sau:
 
 **Giai đoạn 1**: Bắt đầu bầu cử.
 - Follower tăng term lên 1 và chuyển mình sang trạng thái Candidate. Sau đó nó tự bầu chính nó rồi gửi `RequestVote` cho toàn bộ các node khác
 trong hệ thống.
+<Figure src={raftStartVoting} alt="">Ví dụ S2 timeout trước rồi chuyển mình sang Candidate, sau đó gửi request đén các node còn lại</Figure>
+
 - Các node khác trong hệ thống khi nhận được request RequestVote sẽ kiểm tra các điều kiện để xem Candidate có thể trở thành leader 
 dược hay không. Cụ thể:
     - Term của candidate phải cao hơn term hiện tại để tránh tình trạng RequestVote từ một candidate rất cũ trong quá khứ.
     - Log của candidate phải tân thời (up-to-date) hơn log của node hiện tại.
+<Figure src={raftVoting} alt="">S3 trở thành Candidate trước khi nhận được RequestVote từ S2, ta có thể thấy S3 cũng đồng thời gửi RequestVote và không bỏ phiếu cho S2</Figure>
+
 
 **Giai đoạn 2**: Trong quá trình chờ bầu cử, candiate nhận được RequestVote từ node khác gửi đến
 - Nếu term trả về lớn hơn term hiện tại: Candidate tự hiểu mình đã bị lỗi thời, nó tự chuyển về lại trạng thái Follower rồi đợi phản hồi từ leader mới.
@@ -194,16 +216,27 @@ Sau khi 2 giai đoạn kết thúc, các trường hợp có thể xảy ra là:
 term lên 1 rồi bắt đầu lại quá trình bầu chọn leader. Quá trình này có thể diễn ra vô hạn lần.
 - **Trường hợp 2**: Nếu đạt được quá bán số bầu chọn: chuyển từ trạng thái candiate sang leader, gửi thông báo cho toàn mạng biết
 mình đã thành leader. Sau đó bắt đầu quá trình `Log replication` và cho phép nhận request từ client.
+<Figure src={raftGotNewLeader} alt="">S2 đạt được quá bán bầu chọn và gửi thông báo cho toàn mạng, cùng lúc đó các node khác đã không bỏ phiếu cho S3 vì đã bỏ cho S2</Figure>
+
+<Figure src={raftResponseLeader} alt="">Quá trình bầu cử hoàn tất, các node gửi lại ping về leader (S2). Lúc này S2 đã có thể nhận request từ client</Figure>
 
 #### Log replication
-Khi leader đã được bầu chọn, nó bắt đầu nhận request từ client. Mỗi client request chứa một lệnh được thực thi bởi replicated state Machine.
+Khi leader đã được bầu chọn, nó bắt đầu nhận request từ client. Mỗi client request chứa một lệnh được thực thi bởi replicated State Machine.
 Leader thêm lệnh đó vào log của nó như là một entry mới, sau đó thông qua request `AppendEntries` để tiến hành replicate log qua các node.
 
+<Figure src={raftStartRequest} alt="">S2 nhận request từ client, tiến hành ghi vào log, rồi gửi request đến các node</Figure>
+
 Khi entry đã được replicate, leader apply entry đó vào state machine của nó và trả về kết quả thực thi về cho client.
+
+<Figure src={raftReplicatedLogSuccess} alt="">Các node replicate entry thành công và phản hồi về S2, S2 lúc này thực hiện và trả response cho client</Figure>
 
 Trong quá trình replicate log, nếu follower bị lỗi hoặc chạy chậm, hoặc gói tin mạng bị mất trong quá trình gửi tin thì leader sẽ 
 thực hiện lại request AppendEntries cho đến khi tất cả follower lưu trữ được tất cả các log entry. Điều này có thể
 dẫn đến request AppendEntries được thực hiện vô hạn lần.
+
+<Figure src={raftRequestOneNodeFailed} alt="">S2 nhận request nhưng lúc này S4 đã bị lỗi</Figure>
+<Figure src={raftLeaderResendAppendRequest} alt="">Các node khác đã phản hồi nhưng S2 vẫn chưa nhận được phản hồi từ S4 nên tiếp tục lặp lại quá trình gửi request AppendEntries</Figure>
+<Figure src={raftReplicatedLogSuccessAfterRestart} alt="">Cho đến khi S4 re-start lại, lúc này các node replicate entry thành công và phản hồi về S2, S2 mới gửi response về cho client</Figure>
 
 ## Tổng kết
 Trên đây là trình bày cơ bản về bài toán đồng thuận và thuật toán Raft. Bài viết chỉ cung cấp cho các bạn
