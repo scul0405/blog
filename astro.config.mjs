@@ -11,7 +11,6 @@ import robotsTxt from "astro-robots-txt";
 // https://astro.build/config
 export default defineConfig({
   site: 'https://scul0405.github.io',
-  base: '/',
   image: {
     service: squooshImageService()
   },
