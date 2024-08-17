@@ -13,6 +13,7 @@ import DetailsSummary from "../components/DetailsSummary.astro";
 import SocialShareButtons from "../components/social-icons/SocialShareButtons.astro";
 import { POST_METADATA } from "@/consts";
 import { useTranslations } from "@/i18n";
+import avatar from "../assets/avatar.jpg";
 
 const t = useTranslations();
 
@@ -95,9 +96,9 @@ const { Content, headings } = await post.render();
                   authors.map(({ data, slug }) => (
                     <>
                       <li class="flex items-center space-x-2">
-                        {data.avatar && (
+                        {avatar && (
                           <Image
-                            src={data.avatar}
+                            src={avatar}
                             width={38}
                             height={38}
                             alt="avatar"

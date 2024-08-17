@@ -33,13 +33,13 @@ import raftReplicatedLogSuccessAfterRestart from "@/assets/raft-consensus/raft-r
 
 Trong quá trình tìm hiểu của bản thân về hệ thống phân tán. Đặc biệt khi nhìn qua một số công cụ như: Kafka, RabbitMQ, etcd, v.v..
 mình nhận thấy có một vài thứ như sau:
-- `etcd` được xây dựng dựa trên thuật toán đồng thuận Raft.
-- Khi quorum queue của `rabbitMQ` ra đời để thay thế cho classic queue mirroring, nó cũng áp dụng dựa trên thuật toán Raft.
-- Trong [KIP-500](https://cwiki.apache.org/confluence/display/KAFKA/KIP-500%3A+Replace+ZooKeeper+with+a+Self-Managed+Metadata+Quorum) của `Kafka`
+- Etcd được xây dựng dựa trên thuật toán Raft.
+- Khi quorum queue của rabbitMQ ra đời để thay thế cho classic queue mirroring, nó cũng áp dụng dựa trên thuật toán Raft.
+- Trong [KIP-500](https://cwiki.apache.org/confluence/display/KAFKA/KIP-500%3A+Replace+ZooKeeper+with+a+Self-Managed+Metadata+Quorum) của Kafka
 đề cập đến việc thay thế ZooKeeper sang tự động quản lý, KRaft là thuật toán được chọn để thực hiện điều đó, và nó cũng dựa trên thuật toán Raft.
 
 Quá nhiều thứ liên quan đến thuật toán Raft ở đây, vậy nên mình bắt đầu tìm hiểu bài toán đồng thuận cũng như Raft nó là cái gì. Liệu nó có phải là cái trò chơi
-hồi bé mình hay chơi không.
+hồi bé mình hay chơi không (lol).
 
 ## Bài toán đồng thuận
 ### Bài toán các vị tướng Byzantine (Byzantine generals problem)
@@ -89,13 +89,13 @@ sẽ không tồn tại một thuật toán đồng thuận nào đảm bảo k�
 với mọi cấu hình ban đầu khi tồn tại ít nhất một máy tính bị lỗi-và-dừng-hẳn (crash-stop model).
 
 ### Cách thuật toán đồng thuận hoạt động
-- Đề xuất một giá trị: Các node/member đề xuất giá trị dựa trên local data hoặc các transaction mà nó nhận được.
-- Bỏ phiếu: Các node/member bỏ phiếu trên giá trị đã đề xuất. Quá trình voting có thể bao gồm nhiều vòng.
-- Đồng ý: Các node/member giao tiếp với nhau để đạt được sự đồng ý về một giá trị duy nhất dựa trên các phiếu bầu.
-- Quyết định: Khi đã đạt được sự đồng thuận. Tất cả các node/member cam kết giá trị đã đồng ý và tiếp tục với quyết định đó
+- **Đề xuất một giá trị**: Các node/member đề xuất giá trị dựa trên local data hoặc các transaction mà nó nhận được.
+- **Bỏ phiếu**: Các node/member bỏ phiếu trên giá trị đã đề xuất. Quá trình voting có thể bao gồm nhiều vòng.
+- **Đồng ý**: Các node/member giao tiếp với nhau để đạt được sự đồng ý về một giá trị duy nhất dựa trên các phiếu bầu.
+- **Quyết định**: Khi đã đạt được sự đồng thuận. Tất cả các node/member cam kết giá trị đã đồng ý và tiếp tục với quyết định đó
 
 ### Các cột mốc lịch sử
-Từ sau định lý FLP-Impossibility được phát biểu, nó đã thay đổi hoàn toàn góc nhìn khi thiết kế thuật toán đồng thuận. 
+Từ sau định lý **FLP-Impossibility** được phát biểu, nó đã thay đổi hoàn toàn góc nhìn khi thiết kế thuật toán đồng thuận. 
 Các nghiên cứu mới bắt đầu tập trung làm rõ mô hình phù hợp hơn với điều kiện thực tế, từ đó đưa ra thuật toán đồng thuận 
 thỏa mãn được mô hình đó.
 
@@ -130,30 +130,30 @@ Các giả thiết khi thiết kế thuật toán:
     - Raft module.
 - Raft sử dụng Quorum (số bầu chọn tối thiểu giữa các node để một thao tác được thông qua) là [N/2] + 1 (quá bán) và thường được
 triển khai với số node là lẻ để luôn đảm bảo số lượng vote áp đảo với phần còn lại (VD: 5 thì cần tối thiểu 3 vote, 7 thì cần tối thiểu 4 vote). 
-- Có một node đóng vai trò là leader và các node còn lại là follower. Chỉ có node leader mới được quyền trả lời cho người dùng.
-Tuy nhiên, sẽ có trường hợp có nhiều hơn một node nghĩ rằng mình là leader. Nhưng với Quorum đã là [N/2] + 1, Raft đã đảm bảo
-việc không có nhiều hơn một node ngoài node leader tại một thời điểm bất kì có khả năng trả lời người dùng.
+- Có một node đóng vai trò là Leader và các node còn lại là Follower. Chỉ có node Leader mới được quyền trả lời cho người dùng.
+Tuy nhiên, sẽ có trường hợp có nhiều hơn một node nghĩ rằng mình là Leader. Nhưng với Quorum đã là [N/2] + 1, Raft đã đảm bảo
+việc không có nhiều hơn một node ngoài node Leader tại một thời điểm bất kì có khả năng trả lời người dùng.
 
-Trong trường hợp bình thường khi người dùng gửi một request ghi tới node leader, quy trình được thực thi sẽ là:
+Trong trường hợp bình thường khi người dùng gửi một request ghi tới node Leader, quy trình được thực thi sẽ là:
 - API gọi xuống Raft module.
 - Raft module sẽ append request vào log module, sau đó gửi request ra toàn bộ mạng.
-- Leader đồng thời sẽ chờ quá bán "đồng ý" từ các máy tính trong mạng (gồm cả leader) sau đó trả về FSM. FSM sẽ
+- Leader đồng thời sẽ chờ quá bán "đồng ý" từ các máy tính trong mạng (gồm cả Leader) sau đó trả về FSM. FSM sẽ
 cập nhật bản ghi và trả kết quả cho người dùng.
 
 ### Một vài thuật ngữ trong Raft
 #### State
 <Figure src={raftState} alt="">Các trạng thái của Raft</Figure>
 Mỗi node trên Raft sẽ có 3 trạng thái:
-- Follower: chỉ giữ nhiệm vụ trả lời lại các lời gọi RPC trong mạng và không được phép trả lời request từ phía người dùng.
-- Candidate: là trạng thái trung gian do Follower chuyển thành và cố gắng trở thành Leader.
-- Leader: là node chủ động trong cluster. Leader sẽ nhận và xử lý request từ người dùng và replicate log qua các node khác.
+- **Follower**: chỉ giữ nhiệm vụ trả lời lại các lời gọi RPC trong mạng và không được phép trả lời request từ phía người dùng.
+- **Candidate**: là trạng thái trung gian do Follower chuyển thành và cố gắng trở thành Leader.
+- **Leader**: là node chủ động trong cluster. Leader sẽ nhận và xử lý request từ người dùng và replicate log qua các node khác.
 #### Term
 <Figure src={raftTerm} alt="">Raft Term</Figure>
 
 Term là số tự nhiên, đánh số liên tục, đóng vai trò như logical timestamp. 
-Chỉ có tối đa một leader cho mỗi term. Thông tin về term luôn được trao đổi giữa các server mỗi khi gửi nhận message.
+Chỉ có tối đa một Leader cho mỗi term. Thông tin về term luôn được trao đổi giữa các server mỗi khi gửi nhận message.
 
-**Lưu ý**: Thuật toán Raft sử dụng Term bằng 1 là số khởi tạo.
+>**Lưu ý**: Thuật toán Raft sử dụng Term bằng 1 là số khởi tạo.
 #### Log
 <Figure src={raftLog} alt="">Ví dụ về log trong Raft</Figure>
 
@@ -169,29 +169,29 @@ Log bao gồm các entry được đánh số tuần tự, gồm có các khái 
 Khi log entry chuyển sang trạng thái committed, ta có thể an toàn update vào FSM và trả về cho client.
 #### Request Type
 Chỉ có 2 dạng request:
-- RequestVote: dùng để bầu chọn leader.
+- RequestVote: dùng để bầu chọn Leader.
 - AppendEntries: được sử dụng trong 2 trường hợp
     - Giao thức heartbeat. Khi đó, mảng các log cần replicate là empty
-    - Replicate log: thêm mảng các log entry cần replicate qua các follower.
+    - Replicate log: thêm mảng các log entry cần replicate qua các Follower.
 
 ## Phân tích cách hoạt động của thuật toán Raft
 Có 2 phần chính:
-- Bầu chọn leader
+- Bầu chọn Leader
 - Log replication
 
 Ở đây mình sử dụng Raft Visualization từ trang chủ của Raft. Các bạn có thể thử [tại đây](https://raft.github.io/)
 
-#### Bầu chọn leader
+#### Bầu chọn Leader
 Quá trình bầu chọn có thể mô tả như sau:
 <Figure src={votingDiagram} alt="">Mô tả quá trình bầu chọn trong Raft</Figure>
 
-Raft sử dụng cơ chế heartbeat để trigger việc bầu chọn leader.
+Raft sử dụng cơ chế heartbeat để trigger việc bầu chọn Leader.
 Khi hệ thống khởi động, các node sẽ bắt đầu ở trạng thái Follower. 
-Leader lúc này sẽ gửi định kì heartbeat đến tất cả các follower để duy trì vị thế. 
-Sau một thời gian timeout khi không nhận được tín hiệu từ Leader, nó sẽ cho rằng hiện tại đang không có leader nào khả thi
-và sẽ tiến hành 1 cuộc bầu cử mới để chọn ra leader.
+Leader lúc này sẽ gửi định kì heartbeat đến tất cả các Follower để duy trì vị thế. 
+Sau một thời gian timeout khi không nhận được tín hiệu từ Leader, nó sẽ cho rằng hiện tại đang không có Leader nào khả thi
+và sẽ tiến hành 1 cuộc bầu cử mới để chọn ra Leader.
 
-<Figure src={raftInit} alt="">Trạng thái của các node khi khởi tạo với term bằng 1 và chưa có leader</Figure>
+<Figure src={raftInit} alt="">Trạng thái của các node khi khởi tạo với term bằng 1 và chưa có Leader</Figure>
 
 Có 2 giai đoạn chính trong quá trình bầu cử như sau:
 
@@ -200,43 +200,43 @@ Có 2 giai đoạn chính trong quá trình bầu cử như sau:
 trong hệ thống.
 <Figure src={raftStartVoting} alt="">Ví dụ S2 timeout trước rồi chuyển mình sang Candidate, sau đó gửi request đén các node còn lại</Figure>
 
-- Các node khác trong hệ thống khi nhận được request RequestVote sẽ kiểm tra các điều kiện để xem Candidate có thể trở thành leader 
+- Các node khác trong hệ thống khi nhận được request RequestVote sẽ kiểm tra các điều kiện để xem Candidate có thể trở thành Leader 
 dược hay không. Cụ thể:
-    - Term của candidate phải cao hơn term hiện tại để tránh tình trạng RequestVote từ một candidate rất cũ trong quá khứ.
-    - Log của candidate phải tân thời (up-to-date) hơn log của node hiện tại.
+    - Term của Candidate phải cao hơn term hiện tại để tránh tình trạng RequestVote từ một Candidate rất cũ trong quá khứ.
+    - Log của Candidate phải tân thời (up-to-date) hơn log của node hiện tại.
 <Figure src={raftVoting} alt="">S3 trở thành Candidate trước khi nhận được RequestVote từ S2, ta có thể thấy S3 cũng đồng thời gửi RequestVote và không bỏ phiếu cho S2</Figure>
 
 
 **Giai đoạn 2**: Trong quá trình chờ bầu cử, candiate nhận được RequestVote từ node khác gửi đến
-- Nếu term trả về lớn hơn term hiện tại: Candidate tự hiểu mình đã bị lỗi thời, nó tự chuyển về lại trạng thái Follower rồi đợi phản hồi từ leader mới.
+- Nếu term trả về lớn hơn term hiện tại: Candidate tự hiểu mình đã bị lỗi thời, nó tự chuyển về lại trạng thái Follower rồi đợi phản hồi từ Leader mới.
 - Nếu đồng ý: Tăng số lượng bầu chọn lên 1.
 
 Sau khi 2 giai đoạn kết thúc, các trường hợp có thể xảy ra là:
-- **Trường hợp 1**: Nếu timeout nhưng không nhận đủ quá bán số bầu chọn: term hiện tại không nhận được đủ đồng thuận, candidate lại tiếp tục tăng
-term lên 1 rồi bắt đầu lại quá trình bầu chọn leader. Quá trình này có thể diễn ra vô hạn lần.
-- **Trường hợp 2**: Nếu đạt được quá bán số bầu chọn: chuyển từ trạng thái candiate sang leader, gửi thông báo cho toàn mạng biết
-mình đã thành leader. Sau đó bắt đầu quá trình `Log replication` và cho phép nhận request từ client.
+- **Trường hợp 1**: Nếu timeout nhưng không nhận đủ quá bán số bầu chọn: term hiện tại không nhận được đủ đồng thuận, Candidate lại tiếp tục tăng
+term lên 1 rồi bắt đầu lại quá trình bầu chọn Leader. Quá trình này có thể diễn ra vô hạn lần.
+- **Trường hợp 2**: Nếu đạt được quá bán số bầu chọn: chuyển từ trạng thái candiate sang Leader, gửi thông báo cho toàn mạng biết
+mình đã thành Leader. Sau đó bắt đầu quá trình `Log replication` và cho phép nhận request từ client.
 <Figure src={raftGotNewLeader} alt="">S2 đạt được quá bán bầu chọn và gửi thông báo cho toàn mạng, cùng lúc đó các node khác đã không bỏ phiếu cho S3 vì đã bỏ cho S2</Figure>
 
-<Figure src={raftResponseLeader} alt="">Quá trình bầu cử hoàn tất, các node gửi lại ping về leader (S2). Lúc này S2 đã có thể nhận request từ client</Figure>
+<Figure src={raftResponseLeader} alt="">Quá trình bầu cử hoàn tất, các node gửi lại ping về Leader (S2). Lúc này S2 đã có thể nhận request từ client</Figure>
 
 #### Log replication
-Khi leader đã được bầu chọn, nó bắt đầu nhận request từ client. Mỗi client request chứa một lệnh được thực thi bởi replicated State Machine.
+Khi Leader đã được bầu chọn, nó bắt đầu nhận request từ client. Mỗi client request chứa một lệnh được thực thi bởi replicated State Machine.
 Leader thêm lệnh đó vào log của nó như là một entry mới, sau đó thông qua request `AppendEntries` để tiến hành replicate log qua các node.
 
 <Figure src={raftStartRequest} alt="">S2 nhận request từ client, tiến hành ghi vào log, rồi gửi request đến các node</Figure>
 
-Khi entry đã được replicate, leader apply entry đó vào state machine của nó và trả về kết quả thực thi về cho client.
+Khi entry đã được replicate, Leader apply entry đó vào state machine của nó và trả về kết quả thực thi về cho client.
 
 <Figure src={raftReplicatedLogSuccess} alt="">Các node replicate entry thành công và phản hồi về S2, S2 lúc này thực hiện và trả response cho client</Figure>
 
-Trong quá trình replicate log, nếu follower bị lỗi hoặc chạy chậm, hoặc gói tin mạng bị mất trong quá trình gửi tin thì leader sẽ 
-thực hiện lại request AppendEntries cho đến khi tất cả follower lưu trữ được tất cả các log entry. Điều này có thể
+Trong quá trình replicate log, nếu Follower bị lỗi hoặc chạy chậm, hoặc gói tin mạng bị mất trong quá trình gửi tin thì Leader sẽ 
+thực hiện lại request AppendEntries cho đến khi tất cả Follower lưu trữ được tất cả các log entry. Điều này có thể
 dẫn đến request AppendEntries được thực hiện vô hạn lần.
 
 <Figure src={raftRequestOneNodeFailed} alt="">S2 nhận request nhưng lúc này S4 đã bị lỗi</Figure>
 <Figure src={raftLeaderResendAppendRequest} alt="">Các node khác đã phản hồi nhưng S2 vẫn chưa nhận được phản hồi từ S4 nên tiếp tục lặp lại quá trình gửi request AppendEntries</Figure>
-<Figure src={raftReplicatedLogSuccessAfterRestart} alt="">Cho đến khi S4 re-start lại, lúc này các node replicate entry thành công và phản hồi về S2, S2 mới gửi response về cho client</Figure>
+<Figure src={raftReplicatedLogSuccessAfterRestart} alt="">Cho đến khi S4 re-start lại, nó sẽ nhận được request AppendEntries từ S2 và tiến hành replicate entry</Figure>
 
 ## Tổng kết
 Trên đây là trình bày cơ bản về bài toán đồng thuận và thuật toán Raft. Bài viết chỉ cung cấp cho các bạn

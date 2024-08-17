@@ -8,6 +8,7 @@ import Link from "../components/Link.astro";
 import { sortBlogPosts } from "../functions";
 import { ITEMS_PER_PAGE } from "../consts";
 import { useTranslations } from "@/i18n";
+import avatar from "../assets/avatar.jpg";
 
 const t = useTranslations();
 
@@ -18,7 +19,6 @@ interface Props {
 
 const {
   name,
-  avatar,
   occupation,
   company,
   email,
