@@ -104,7 +104,7 @@ Ta nói event A xảy ra trước event B (A → B) khi nằm ở 1 trong 3 đi�
 <Figure src={happensBeforeExample} alt="">Ví dụ về quan hệ Happens-before</Figure>
 Nhìn vào ảnh trên ta có:
 - a → b, c → d, và e → f do cùng nằm trên một node và là thực thi ở local.
-- b → c và d → f do m1 và m2
+- b → c và d → f do `m1` và `m2`
 - a → c, a → d, a → f, b → d, b → f, và c → f do tính chất bắc cầu
 - a || e, b || e, c || e, và d || e
 
@@ -117,6 +117,6 @@ vấn đề về thứ tự event luôn được đảm bảo trong hệ thống
 dẫn đến sự sai lệch, bất đối xứng thời gian giữa các node với nhau.
 
 Đây cũng là bài viết mình muốn chia sẻ để có thể làm tiền đề cho những chương mình dự định sẽ viết tiếp theo sau này.
-Ở bài sau, hi vọng mình sẽ làm rõ được phần còn lại là Logical Clock cùng với sự quan trọng của nó giao thức Broadcast.
+Ở bài sau, hi vọng mình sẽ làm rõ được phần còn lại là Logical Clock cùng với sự quan trọng của nó trong giao thức Broadcast.
 Nếu có thắc mắc hay đóng góp nội dung chỉnh sửa, vui lòng liên hệ mình để có thể trao đổi và cập nhật. 
 Mình rất welcome các bạn ^^.
