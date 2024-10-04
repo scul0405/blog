@@ -1,0 +1,82 @@
+---
+title: Replication và Sharding trong MongoDB (P1)
+summary: Tổng quan về database replication và sharding trong MongoDB - Phần 1 Replication
+postLayout: column
+date: '2024-09-17'
+draft: true
+cover: '@/assets/mongodb-replication-sharding/cover.png'
+tags: [database]
+---
+
+>Lưu ý: Tài liệu hiện tại được tham khảo theo phiên bản 7.0 của MongoDB documentation. Nếu có sai sót về
+tương thích phiên bản, vui lòng liên hệ với mình để mình có thể cập nhật sớm nhất nhé.
+
+## Khái niệm
+Database replication là quá trình lưu trữ dữ liệu tương đồng giữa nhiều nodes được kết nối 
+thông qua network để tăng cường tính sẵn sàng và khả năng tiếp cận. 
+Nó cũng cải thiện khả năng phục hồi khi có sự cố xảy ra, giúp hệ thống thêm phần tin cậy.
+
+## Replication trong MongoDB
+Một replicate set trong mongodb là một nhóm các `mongod` process có nhiệm vụ duy trì 
+dataset giống nhau. Replicate set giúp cho mongodb có thêm cluster dự phòng đảm bảo 
+luôn trong trạng thái high availability, nó là một trong những điều cơ bản mà việc triển khai 
+lên production cần thực hiện.
+
+Nhiều dữ liệu được copy trên nhiều database server khác nhau giúp cho hệ thống ổn định hơn,
+chịu lỗi tốt hơn và tránh được việc khi một database server bị lỗi.
+
+Tăng khả năng chịu tải cho việc đọc bằng cách những client có thể gửi `read operation` đến các server khác nhau.
+
+Ngoài ra, nó còn giúp cho việc tránh được sự cố và có thể khôi phục dữ liệu sau sự cố.
+
+## Replicate Set
+Một `replicate set` trong MongoDB có thể chứa nhiều `data bearing node` (node chứa dữ liệu) và 
+có thể tuỳ chọn một `arbiter node` (node chỉ sử dụng cho bầu cử, không chứa dữ liệu).
+
+MongoDB cho phép tối đa 50 members và 7 voting members.
+
+Trong số các node mang dữ liệu (bearing node), có 1 và chỉ 1 member được gọi là `primary node`, 
+còn lại là `secondary node`. Cả primary và secondary node có thể cấu hình thuộc tính 
+`priority` - thuộc tính khả năng trở thành primary node (0 - 1000). Tuy nhiên primary node và secondary node
+khác nhau ở chỗ:
+- Chỉ primary node mới được nhận các `write operation`.
+- Secondary node có thể có các thuộc tính là: `primary-0` (không thể trở thành primary và không có quyền bầu cử) 
+hoặc `non-voting` (không có quyền bầu cử). Bên cạnh đó còn có hidden member 
+(tương tự như primary-0 nhưng invisible với client).
+
+Tất cả các thay đổi sẽ được ghi vào `oplog` (operations log) - hệ thống log của MongoDB.
+
+Tất cả các secondary node sẽ đồng bộ dữ liệu bất đồng bộ bằng cách đọc file oplog của primary node.
+
+Trong một vài trường hợp, khi kinh phí không cho phép bạn có thể tạo nhiều secondary node hơn. 
+Bạn vẫn có thể dùng arbiter node (priority: 0-1), node này chỉ có nhiệm vụ vote mà không đồng bộ dữ liệu 
+từ primary node.
+
+## Automatic Failover
+Khi primary node không communitate với những node member khác trong khoảng thời gian đã cài đặt là 
+`electionTimeoutMillis`. Một cuộc bầu cử mới sẽ diễn ra và đưa một secondary node khác lên trở thành primary node. 
+Khi đó primary node sẽ trong trạng thái offline và nếu khởi động lại sẽ thành secondary node.
+
+Trong quá trình bầu cử, tất cả các write operations sẽ bị chặn lại. Tuy nhiên với các read operation sẽ vẫn 
+được thực hiện nếu các secondary node đã được cấu hình cho phép đọc khi primary node offline.
+
+## Read Operations
+
+Trong quá trình sao chép dữ liệu bất đồng bộ, đôi khi secondary node chưa kịp sao chép dữ liệu từ primary node
+dẫn đến việc đọc từ secondary node sẽ không khớp trạng thái đúng với primary node.
+
+MongoDB có 5 read preference mode:
+- `primary`: Mode mặc định. Tất cả các read operation đều thông qua primary node. 
+Trong những giao tác phân tán (distributed transaction) chứa read operation thì phải dùng mode này.
+- `primaryPreferred`: Trong nhiều trường hợp, các read operation đọc từ primary node nhưng nó không khả dụng,
+nó tiến hành chuyển sang đọc từ secondary node.
+- `secondary`: Tất cả các read operation đọc từ secondary node. Thường dùng để giảm bớt tải cho primary node.
+- `secondaryPreferred`: Các read operation thường đọc data từ secondary node. Nếu replicate set chỉ có mỗi primary node và 
+không có node nào khác, nó sẽ tiến hành đọc dữ liệu từ primary node.
+- `nearest`: Các read operation sẽ đọc ngẫu nhiên bất kể từ primary node hay secondary node dựa trên một ngưỡng độ trễ nhất định.
+Độ trễ có thể được tính toán dựa trên các yếu tố:
+    - [localThresholdMS](https://www.mongodb.com/docs/manual/reference/connection-string/#mongodb-urioption-urioption.localThresholdMS)
+    - [maxStalenessSeconds](https://www.mongodb.com/docs/manual/core/read-preference-staleness/#std-label-replica-set-read-preference-max-staleness)
+    - [tag set lists](https://www.mongodb.com/docs/manual/tutorial/configure-replica-set-tag-sets/) 
+
+## Write Operations

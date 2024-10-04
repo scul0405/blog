@@ -198,7 +198,7 @@ Có 2 giai đoạn chính trong quá trình bầu cử như sau:
 **Giai đoạn 1**: Bắt đầu bầu cử.
 - Follower tăng term lên 1 và chuyển mình sang trạng thái Candidate. Sau đó nó tự bầu chính nó rồi gửi `RequestVote` cho toàn bộ các node khác
 trong hệ thống.
-<Figure src={raftStartVoting} alt="">Ví dụ S2 timeout trước rồi chuyển mình sang Candidate, sau đó gửi request đén các node còn lại</Figure>
+<Figure src={raftStartVoting} alt="">Ví dụ S2 timeout trước rồi chuyển mình sang Candidate, sau đó gửi request đến các node còn lại</Figure>
 
 - Các node khác trong hệ thống khi nhận được request RequestVote sẽ kiểm tra các điều kiện để xem Candidate có thể trở thành Leader 
 dược hay không. Cụ thể:
